@@ -2,11 +2,15 @@ import json
 from datetime import datetime
 
 
+def parse_date(date_str: str) -> datetime.date:
+    return datetime.strptime(date_str, "%Y-%m-%d").date()
+
+
 def check_capacity(max_capacity: int, guests: list) -> bool:
     events = []
-    for g in guests:
-        check_in = datetime.strptime(g["check-in"], "%Y-%m-%d").date()
-        check_out = datetime.strptime(g["check-out"], "%Y-%m-%d").date()
+    for guest in guests:
+        check_in = parse_date(guest["check-in"])
+        check_out = parse_date(guest["check-out"])
         events.append((check_in, 1))
         events.append((check_out, -1))
     events.sort(key=lambda x: (x[0], x[1]))
