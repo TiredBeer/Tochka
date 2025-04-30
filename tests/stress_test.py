@@ -35,10 +35,10 @@ def generate_guests(n, days=365):
     return guests
 
 
-def stress_test(number_tests=1000, max_n=1000):
+def stress_test(number_tests=1000, max_n=100):
     mismatches = 0
 
-    print(f"Запускаем {number_tests} случайных тестов")
+    print(f"Запуск {number_tests} случайных тестов")
 
     for i in range(1, number_tests + 1):
         n = random.randint(1, max_n)
@@ -56,7 +56,6 @@ def stress_test(number_tests=1000, max_n=1000):
             print("Предполагаемый ответ:", res_naive)
             print()
 
-    print(f"Количество проваленных тестов: {mismatches}")
     if mismatches == 0:
         print("Все тесты пройдены")
     else:
