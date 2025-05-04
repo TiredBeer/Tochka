@@ -1,13 +1,19 @@
 import itertools
 import collections
 import random
+from typing import List, Tuple
 from run2 import solve
 
 
-def naive_solve(grid):
+def naive_solve(grid: List[List[str]]) -> int:
+    """
+    Наивная реализация решения задачи о роботах в лабиринте для небольшого числа ключей (<=3).
+    Перебирает все возможные порядки сбора ключей и назначения роботов.
+    """
     n, m = len(grid), len(grid[0])
-    starts = []
-    key_positions = {}
+    starts: List[Tuple[int, int]] = []
+    key_positions: dict[str, Tuple[int, int]] = {}
+
     for i in range(n):
         for j in range(m):
             c = grid[i][j]
@@ -15,10 +21,17 @@ def naive_solve(grid):
                 starts.append((i, j))
             elif 'a' <= c <= 'z':
                 key_positions[c] = (i, j)
+    keys = sorted(key_positions)
+    K = len(keys)
 
-    keys = sorted(key_positions.keys())
-
-    def bfs(start, target, collected):
+    def bfs(start: Tuple[int, int],
+            target: Tuple[int, int],
+            collected: set[str]
+            ) -> int | None:
+        """
+        Находит кратчайшее расстояние от start до target,
+        учитывая собранные ключи (для прохода через двери).
+        """
         sx, sy = start
         tx, ty = target
         dq = collections.deque([(sx, sy, 0)])
@@ -44,10 +57,11 @@ def naive_solve(grid):
         return None
 
     best = float('inf')
+
     for order in itertools.permutations(keys):
-        for assign in itertools.product(range(4), repeat=len(keys)):
+        for assign in itertools.product(range(4), repeat=K):
             positions = list(starts)
-            collected = set()
+            collected: set[str] = set()
             steps = 0
             ok = True
             for key, robot in zip(order, assign):
@@ -63,42 +77,53 @@ def naive_solve(grid):
     return -1 if best == float('inf') else best
 
 
-def generate_random_grid(n, m, max_keys=3, wall_prob=0.2):
-    grid = [['.' for _ in range(m)] for _ in range(n)]
+def generate_random_grid(n: int,
+                         m: int,
+                         max_keys: int = 3,
+                         wall_prob: float = 0.2
+                         ) -> List[str]:
+    """
+    Генерирует случайный лабиринт в виде списка строк:
+      - '.' — пустые клетки,
+      - '#' — стены с вероятностью wall_prob,
+      - '@' — четыре стартовые позиции,
+      - 'a'.. — ключи, 'A'.. — двери.
+    """
+    grid: List[List[str]] = [['.' for _ in range(m)] for _ in range(n)]
     for i in range(1, n - 1):
         for j in range(1, m - 1):
             if random.random() < wall_prob:
                 grid[i][j] = '#'
 
-    empties = [(i, j) for i in range(0, n - 1) for j in range(0, m - 1) if
-               grid[i][j] == '.']
-
+    empties = [(i, j) for i in range(n) for j in range(m) if grid[i][j] == '.']
     random.shuffle(empties)
-    starts = empties[:4]
-    for x, y in starts:
+    for x, y in empties[:4]:
         grid[x][y] = '@'
 
     K = random.randint(1, max_keys)
-    empties = [pos for pos in empties if pos not in starts]
-    random.shuffle(empties)
-    key_positions = empties[:K]
-    door_positions = empties[K:2 * K]
-    keys = []
-
+    remains = [pos for pos in empties if pos not in empties[:4]]
+    random.shuffle(remains)
+    key_positions = remains[:K]
+    door_positions = remains[K:2 * K]
     for idx, (kx, ky) in enumerate(key_positions):
         key = chr(ord('a') + idx)
         door = key.upper()
         grid[kx][ky] = key
         dx, dy = door_positions[idx]
         grid[dx][dy] = door
-        keys.append(key)
-
     return [''.join(row) for row in grid]
 
 
-def run_stress_tests(number_tests=50, n=10, m=10, max_keys=3):
+def run_stress_tests(number_tests: int = 50,
+                     n: int = 10,
+                     m: int = 10,
+                     max_keys: int = 3
+                     ) -> None:
+    """
+    Сравнивает наивное и оптимальное решения на случайных лабиринтах.
+    Выводит результаты и количество несовпадений.
+    """
     print(f"Запуск {number_tests} случайных тестов")
-
     mismatches = 0
     for i in range(number_tests):
         lines = generate_random_grid(n, m, max_keys)
@@ -107,10 +132,10 @@ def run_stress_tests(number_tests=50, n=10, m=10, max_keys=3):
         res_naive = naive_solve(grid)
         if res_fast != res_naive:
             mismatches += 1
-            print(f"Несоответствие в тесте {i}")
-            print(f"res_fast: {res_fast}\nres_naive: {res_naive}")
+            print(
+                f"Несоответствие в тесте #{i}: opt={res_fast}, naive={res_naive}")
             for row in grid:
-                print(*row)
+                print(''.join(row))
             print()
 
     if mismatches == 0:

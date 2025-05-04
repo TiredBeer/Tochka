@@ -1,14 +1,15 @@
 import sys
+from typing import List, Tuple, Dict
 from collections import deque, defaultdict
 import heapq
 from dataclasses import dataclass, field
 
 
-def read_input_grid():
+def get_input() -> List[List[str]]:
     """
     Читает входной лабиринт из стандартного ввода и возвращает список списков символов.
     """
-    return [list(line.rstrip("\n")) for line in sys.stdin]
+    return [list(line.strip("\n")) for line in sys.stdin]
 
 
 @dataclass(order=True)
@@ -21,7 +22,8 @@ class PriorityQueueEntry:
     state: tuple = field(compare=False)
 
 
-def parse_grid(grid):
+def parse_grid(grid: List[List[str]]
+               ) -> Tuple[List[Tuple[int, int]], Dict[str, Tuple[int, int]]]:
     """
     Находит стартовые позиции роботов и позиции ключей в сетке.
     Возвращает количество строк, количество столбцов, список стартовых позиций и словарь ключ->позиция.
@@ -40,7 +42,10 @@ def parse_grid(grid):
     return start_positions, key_positions
 
 
-def index_points(start_positions, key_positions):
+def index_points(
+        start_positions: List[Tuple[int, int]],
+        key_positions: Dict[str, Tuple[int, int]]
+) -> Tuple[List[Tuple[int, int]], Dict[Tuple[int, int], int], int]:
     """
     Строит полный список точек интереса: сначала стартовые позиции, затем позиции ключей в лексикографическом порядке.
     Возвращает список точек, словарь координат->индекс и число ключей.
@@ -53,7 +58,11 @@ def index_points(start_positions, key_positions):
     return all_points, coordinate_to_index, number_of_keys
 
 
-def build_reachability_graph(grid, points, coordinate_to_index):
+def build_reachability_graph(
+        grid: List[List[str]],
+        points: List[Tuple[int, int]],
+        coordinate_to_index: Dict[Tuple[int, int], int]
+) -> List[Dict[int, List[Tuple[int, int]]]]:
     """
     Для каждой точки рассчитывает все достижимые другие точки вместе с маской дверей и расстоянием.
     Возвращает список словарей: graph[source_index][target_index] = [(door_mask, distance), ...].
@@ -107,7 +116,8 @@ def build_reachability_graph(grid, points, coordinate_to_index):
     return graph
 
 
-def apply_pareto_filter(graph):
+def apply_pareto_filter(
+        graph: List[Dict[int, List[Tuple[int, int]]]]) -> None:
     """
     Оставляет в каждой ячейке graph[source][target] только недоминируемые варианты (по двери и расстоянию).
     """
@@ -133,7 +143,8 @@ def apply_pareto_filter(graph):
             graph[source_index][target_index] = filtered
 
 
-def compute_minimum_edge_length(graph):
+def compute_minimum_edge_length(
+        graph: List[Dict[int, List[Tuple[int, int]]]]) -> int:
     """
     Находит минимальное расстояние среди всех ребер графа, нужен для эвристики A*.
     """
@@ -142,20 +153,21 @@ def compute_minimum_edge_length(graph):
     return min(all_distances) if all_distances else 0
 
 
-def a_star_search(graph, number_of_keys):
+def a_star_search(
+        graph: List[Dict[int, List[Tuple[int, int]]]], num_keys: int) -> int:
     """
     Выполняет A*-поиск по состояниям роботов и собранных ключей.
     Возвращает минимальное число шагов или -1, если сбор всех ключей невозможен.
     """
     number_of_points = len(graph)
-    all_keys_collected = (1 << number_of_keys) - 1
+    all_keys_collected = (1 << num_keys) - 1
     start_state = (0, 1, 2, 3, 0)
     min_edge_length = compute_minimum_edge_length(graph)
 
     def heuristic(state):
         collected_mask = state[4]
         collected_count = bin(collected_mask).count('1')
-        remaining_keys = number_of_keys - collected_count
+        remaining_keys = num_keys - collected_count
         return remaining_keys * min_edge_length
 
     priority_queue = []
@@ -206,7 +218,7 @@ def a_star_search(graph, number_of_keys):
     return -1
 
 
-def solve(grid):
+def solve(grid: List[List[str]]) -> int:
     """
     Координирует разбор сетки, построение графа и запуск A*-поиска.
     """
@@ -219,8 +231,9 @@ def solve(grid):
 
 
 def main():
-    grid = read_input_grid()
-    print(solve(grid))
+    data = get_input()
+    result = solve(data)
+    print(result)
 
 
 if __name__ == '__main__':

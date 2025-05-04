@@ -1,10 +1,16 @@
 import random
 from datetime import datetime, timedelta
+from typing import List, Dict, Any
 from run import check_capacity, parse_date
 
 
-def naive_check_capacity(max_capacity: int, guests: list) -> bool:
-    intervals = []
+def naive_check_capacity(max_capacity: int,
+                         guests: List[Dict[str, str]]) -> bool:
+    """
+    Проверяет корректность работы check_capacity простым алгоритмом полного перебора:
+    Для каждого момента заезда считает число гостей и сравнивает с max_capacity.
+    """
+    intervals: List[Any] = []
     for guest in guests:
         check_in = parse_date(guest["check-in"])
         check_out = parse_date(guest["check-out"])
@@ -19,9 +25,12 @@ def naive_check_capacity(max_capacity: int, guests: list) -> bool:
     return True
 
 
-def generate_guests(n, days=365):
+def generate_guests(n: int, days: int = 365) -> List[Dict[str, str]]:
+    """
+    Генерирует список n случайных гостей с датами заезда и выезда.
+    """
     base = datetime(2021, 1, 1).date()
-    guests = []
+    guests: List[Dict[str, str]] = []
     for i in range(n):
         ci_offset = random.randint(0, days - 1)
         length = random.randint(1, days - ci_offset)
@@ -35,9 +44,11 @@ def generate_guests(n, days=365):
     return guests
 
 
-def stress_test(number_tests=1000, max_n=100):
+def stress_test(number_tests: int = 1000, max_n: int = 100) -> None:
+    """
+    Запускает серию стохастических тестов, сравнивая результаты check_capacity и naive_check_capacity.
+    """
     mismatches = 0
-
     print(f"Запуск {number_tests} случайных тестов")
 
     for i in range(1, number_tests + 1):
@@ -62,5 +73,5 @@ def stress_test(number_tests=1000, max_n=100):
         print(f"Количество проваленных тестов: {mismatches}")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     stress_test()

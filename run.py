@@ -3,10 +3,16 @@ from datetime import datetime
 
 
 def parse_date(date_str: str) -> datetime.date:
+    """
+    Парсит строку в формате YYYY-MM-DD в объект datetime.date.
+    """
     return datetime.strptime(date_str, "%Y-%m-%d").date()
 
 
 def check_capacity(max_capacity: int, guests: list) -> bool:
+    """
+    Проверяет, не превышает ли число одновременно проживающих гостей заданную вместимость.
+    """
     events = []
     for guest in guests:
         check_in = parse_date(guest["check-in"])
