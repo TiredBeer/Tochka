@@ -1,128 +1,225 @@
 import sys
-import collections
+from collections import deque, defaultdict
 import heapq
 from dataclasses import dataclass, field
 
 
+def read_input_grid():
+    """
+    Читает входной лабиринт из стандартного ввода и возвращает список списков символов.
+    """
+    return [list(line.rstrip("\n")) for line in sys.stdin]
+
+
 @dataclass(order=True)
-class State:
-    steps: int
-    positions: tuple = field(compare=False)
-    mask: int = field(compare=False)
-
-
-def get_input():
-    return [list(line.rstrip('\n')) for line in sys.stdin]
+class PriorityQueueEntry:
+    """
+    Элемент очереди приоритетов для A*: хранит приоритет f, текущую стоимость g и состояние.
+    """
+    priority: int
+    cost: int = field(compare=False)
+    state: tuple = field(compare=False)
 
 
 def parse_grid(grid):
-    n, m = len(grid), len(grid[0])
-    starts = []
+    """
+    Находит стартовые позиции роботов и позиции ключей в сетке.
+    Возвращает количество строк, количество столбцов, список стартовых позиций и словарь ключ->позиция.
+    """
+    num_rows = len(grid)
+    num_cols = len(grid[0])
+    start_positions = []
     key_positions = {}
-    for i in range(n):
-        for j in range(m):
-            c = grid[i][j]
-            if c == '@':
-                starts.append((i, j))
-            elif 'a' <= c <= 'z':
-                key_positions[c] = (i, j)
-
-    key_list = sorted(key_positions)
-    nodes = starts + [key_positions[c] for c in key_list]
-    key_idx = {c: i for i, c in enumerate(key_list)}
-    key_node = {c: i + 4 for i, c in enumerate(key_list)}
-    keys_mask = (1 << len(key_list)) - 1
-    return nodes, key_idx, key_node, keys_mask
+    for row_index in range(num_rows):
+        for col_index in range(num_cols):
+            cell = grid[row_index][col_index]
+            if cell == '@':
+                start_positions.append((row_index, col_index))
+            elif 'a' <= cell <= 'z':
+                key_positions[cell] = (row_index, col_index)
+    return start_positions, key_positions
 
 
-def build_graph(grid, nodes, key_idx, key_node):
-    n, m = len(grid), len(grid[0])
-    graph = [[] for _ in nodes]
-    dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+def index_points(start_positions, key_positions):
+    """
+    Строит полный список точек интереса: сначала стартовые позиции, затем позиции ключей в лексикографическом порядке.
+    Возвращает список точек, словарь координат->индекс и число ключей.
+    """
+    sorted_keys = sorted(key_positions)
+    number_of_keys = len(sorted_keys)
+    all_points = start_positions + [key_positions[key] for key in sorted_keys]
+    coordinate_to_index = {point: index for index, point in
+                           enumerate(all_points)}
+    return all_points, coordinate_to_index, number_of_keys
 
-    for u, (sx, sy) in enumerate(nodes):
-        dq = collections.deque([(sx, sy, 0, 0)])
-        visited_states = {(sx, sy, 0)}
 
-        while dq:
-            x, y, dist, req = dq.popleft()
-            for dx, dy in dirs:
-                nx, ny = x + dx, y + dy
-                if not (0 <= nx < n and 0 <= ny < m):
+def build_reachability_graph(grid, points, coordinate_to_index):
+    """
+    Для каждой точки рассчитывает все достижимые другие точки вместе с маской дверей и расстоянием.
+    Возвращает список словарей: graph[source_index][target_index] = [(door_mask, distance), ...].
+    """
+    number_of_points = len(points)
+    num_rows, num_cols = len(grid), len(grid[0])
+    graph = [defaultdict(list) for _ in range(number_of_points)]
+
+    for source_index, (start_row, start_col) in enumerate(points):
+        visited_masks = {(start_row, start_col): [0]}
+        bfs_queue = deque(
+            [(start_row, start_col, 0, 0)])
+
+        while bfs_queue:
+            row, col, distance, door_mask = bfs_queue.popleft()
+            target_index = coordinate_to_index.get((row, col))
+            if target_index is not None and target_index != source_index:
+                graph[source_index][target_index].append((door_mask, distance))
+
+            for d_row, d_col in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                new_row, new_col = row + d_row, col + d_col
+                if not (0 <= new_row < num_rows and 0 <= new_col < num_cols):
                     continue
-                cell = grid[nx][ny]
-                if cell == '#':
+                cell_value = grid[new_row][new_col]
+                if cell_value == '#':
                     continue
 
-                req2 = req
-                if 'A' <= cell <= 'Z':
-                    k = cell.lower()
-                    if k in key_idx:
-                        req2 |= 1 << key_idx[k]
+                new_distance = distance + 1
+                new_door_mask = door_mask
+                if 'A' <= cell_value <= 'Z':
+                    door_key_index = ord(cell_value.lower()) - ord('a')
+                    new_door_mask |= (1 << door_key_index)
 
-                state = (nx, ny, req2)
-                if state in visited_states:
-                    continue
-                visited_states.add(state)
+                previous_masks = visited_masks.get((new_row, new_col))
+                if previous_masks:
 
-                if 'a' <= cell <= 'z':
-                    graph[u].append((
-                        key_node[cell],
-                        dist + 1,
-                        req2
-                    ))
-                dq.append((nx, ny, dist + 1, req2))
+                    if any((old_mask & new_door_mask) == old_mask for old_mask
+                           in previous_masks):
+                        continue
+
+                    visited_masks[(new_row, new_col)] = [
+                        mask for mask in previous_masks
+                        if not ((new_door_mask & mask) == new_door_mask)]
+                    visited_masks[(new_row, new_col)].append(new_door_mask)
+                else:
+                    visited_masks[(new_row, new_col)] = [new_door_mask]
+
+                bfs_queue.append(
+                    (new_row, new_col, new_distance, new_door_mask))
+
     return graph
 
 
-def find_min_steps(graph, keys_mask):
-    num_robots = 4
-    start_positions = tuple(range(num_robots))
-    start_mask = 0
+def apply_pareto_filter(graph):
+    """
+    Оставляет в каждой ячейке graph[source][target] только недоминируемые варианты (по двери и расстоянию).
+    """
+    for source_index in range(len(graph)):
+        for target_index, variants in list(graph[source_index].items()):
+            best_distances = {}
+            for mask, distance in variants:
+                if (mask not in best_distances
+                        or distance < best_distances[mask]):
+                    best_distances[mask] = distance
 
-    heap = [State(0, start_positions, start_mask)]
-    best = {(start_positions, start_mask): 0}
+            filtered = []
+            for mask, distance in best_distances.items():
+                is_dominated = any(
+                    other_mask != mask and
+                    (other_mask & mask) == other_mask and
+                    best_distances[other_mask] <= distance
+                    for other_mask in best_distances
+                )
+                if not is_dominated:
+                    filtered.append((mask, distance))
 
-    while heap:
-        st = heapq.heappop(heap)
-        steps, poses, mask = st.steps, st.positions, st.mask
-        if best[(poses, mask)] < steps:
+            graph[source_index][target_index] = filtered
+
+
+def compute_minimum_edge_length(graph):
+    """
+    Находит минимальное расстояние среди всех ребер графа, нужен для эвристики A*.
+    """
+    all_distances = [distance for adj in graph for variants in adj.values() for
+                     (mask, distance) in variants]
+    return min(all_distances) if all_distances else 0
+
+
+def a_star_search(graph, number_of_keys):
+    """
+    Выполняет A*-поиск по состояниям роботов и собранных ключей.
+    Возвращает минимальное число шагов или -1, если сбор всех ключей невозможен.
+    """
+    number_of_points = len(graph)
+    all_keys_collected = (1 << number_of_keys) - 1
+    start_state = (0, 1, 2, 3, 0)
+    min_edge_length = compute_minimum_edge_length(graph)
+
+    def heuristic(state):
+        collected_mask = state[4]
+        collected_count = bin(collected_mask).count('1')
+        remaining_keys = number_of_keys - collected_count
+        return remaining_keys * min_edge_length
+
+    priority_queue = []
+    heapq.heappush(
+        priority_queue,
+        PriorityQueueEntry(
+            priority=heuristic(start_state),
+            cost=0,
+            state=start_state
+        )
+    )
+    best_cost = {start_state: 0}
+
+    while priority_queue:
+        entry = heapq.heappop(priority_queue)
+        current_cost, current_state = entry.cost, entry.state
+        if current_cost > best_cost.get(current_state, float('inf')):
             continue
-        if mask == keys_mask:
-            return steps
+        if current_state[4] == all_keys_collected:
+            return current_cost
 
-        for i in range(num_robots):
-            u = poses[i]
-            for node_idx, dist, req_mask in graph[u]:
-                key_bit = 1 << (node_idx - 4)
-                if mask & key_bit:
+        robot_positions, keys_mask = current_state[:4], current_state[4]
+        for robot_index, robot_point in enumerate(robot_positions):
+            for target_point in range(4, number_of_points):
+                key_bit = 1 << (target_point - 4)
+                if keys_mask & key_bit:
                     continue
-                if req_mask & ~mask:
-                    continue
+                for required_mask, distance in graph[robot_point].get(
+                        target_point, []):
+                    if required_mask & ~keys_mask:
+                        continue
 
-                new_mask = mask | key_bit
-                new_poses = list(poses)
-                new_poses[i] = node_idx
-                new_poses = tuple(new_poses)
-                new_steps = steps + dist
-                state = (new_poses, new_mask)
-                if best.get(state, float('inf')) > new_steps:
-                    best[state] = new_steps
-                    heapq.heappush(
-                        heap,
-                        State(new_steps, new_poses, new_mask)
-                    )
+                    new_keys_mask = keys_mask | key_bit
+                    new_positions = list(robot_positions)
+                    new_positions[robot_index] = target_point
+                    new_state = (*new_positions, new_keys_mask)
+                    tentative_cost = current_cost + distance
+                    if tentative_cost < best_cost.get(new_state, float('inf')):
+                        best_cost[new_state] = tentative_cost
+                        heapq.heappush(
+                            priority_queue,
+                            PriorityQueueEntry(
+                                priority=tentative_cost + heuristic(new_state),
+                                cost=tentative_cost,
+                                state=new_state
+                            )
+                        )
     return -1
 
 
 def solve(grid):
-    nodes, key_idx, key_node, keys_mask = parse_grid(grid)
-    graph = build_graph(grid, nodes, key_idx, key_node)
-    return find_min_steps(graph, keys_mask)
+    """
+    Координирует разбор сетки, построение графа и запуск A*-поиска.
+    """
+    start_positions, key_positions = parse_grid(grid)
+    points, coordinate_to_index, number_of_keys = index_points(start_positions,
+                                                               key_positions)
+    graph = build_reachability_graph(grid, points, coordinate_to_index)
+    apply_pareto_filter(graph)
+    return a_star_search(graph, number_of_keys)
 
 
 def main():
-    grid = get_input()
+    grid = read_input_grid()
     print(solve(grid))
 
 
