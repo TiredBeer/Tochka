@@ -230,6 +230,12 @@ def solve(grid: List[List[str]]) -> int:
     return a_star_search(graph, number_of_keys)
 
 
+def min_steps_to_collect_all_keys():
+    data = get_input()
+    result = solve(data)
+    print(result)
+
+
 def main():
     data = get_input()
     result = solve(data)
