@@ -196,8 +196,10 @@ def a_star_search(
         for robot_index, robot_point in enumerate(robot_positions):
             for target_point in range(4, number_of_points):
                 key_bit = 1 << (target_point - 4)
+
                 if keys_mask & key_bit:
                     continue
+
                 for required_mask, distance in graph[robot_point].get(
                         target_point, []):
                     if required_mask & ~keys_mask:
