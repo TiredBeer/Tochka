@@ -116,7 +116,7 @@ def generate_random_grid(n: int,
 def run_stress_tests(number_tests: int = 50,
                      n: int = 10,
                      m: int = 10,
-                     max_keys: int = 3
+                     max_keys: int = 4
                      ) -> None:
     """
     Сравнивает наивное и оптимальное решения на случайных лабиринтах.

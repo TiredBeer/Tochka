@@ -1,7 +1,24 @@
 import sys
 from collections import deque, defaultdict
 import heapq
-from dataclasses import dataclass, field
+from typing import NamedTuple
+
+# Использование dataclass/NamedTuple замедляет выполнение кода
+Position = tuple[int, int]
+
+
+class ParsedGrid(NamedTuple):
+    start_positions: list[Position]
+    key_positions: dict[str, Position]
+
+
+class PriorityQueueEntry(NamedTuple):
+    priority: int
+    cost: int
+    state: tuple[int, ...]
+
+    def __lt__(self, other: "PriorityQueueEntry") -> bool:
+        return self.priority < other.priority
 
 
 def get_input() -> list[list[str]]:
@@ -11,56 +28,41 @@ def get_input() -> list[list[str]]:
     return [list(line.strip("\n")) for line in sys.stdin]
 
 
-@dataclass(order=True)
-class PriorityQueueEntry:
-    """
-    Элемент очереди приоритетов для A*: хранит приоритет f, текущую стоимость g и состояние.
-    """
-    priority: int
-    cost: int = field(compare=False)
-    state: tuple = field(compare=False)
-
-
-def parse_grid(grid: list[list[str]]
-               ) -> tuple[list[tuple[int, int]], dict[str, tuple[int, int]]]:
+def parse_grid(grid: list[list[str]]) -> ParsedGrid:
     """
     Находит стартовые позиции роботов и позиции ключей в сетке.
-    Возвращает количество строк, количество столбцов, список стартовых позиций и словарь ключ->позиция.
+    Возвращает ParsedGrid: start_positions и key_positions.
     """
-    num_rows = len(grid)
-    num_cols = len(grid[0])
-    start_positions = []
-    key_positions = {}
-    for row_index in range(num_rows):
-        for col_index in range(num_cols):
-            cell = grid[row_index][col_index]
+    start_positions: list[Position] = []
+    key_positions: dict[str, Position] = {}
+    for r, row in enumerate(grid):
+        for c, cell in enumerate(row):
             if cell == '@':
-                start_positions.append((row_index, col_index))
+                start_positions.append((r, c))
             elif 'a' <= cell <= 'z':
-                key_positions[cell] = (row_index, col_index)
-    return start_positions, key_positions
+                key_positions[cell] = (r, c)
+    return ParsedGrid(start_positions, key_positions)
 
 
 def index_points(
-        start_positions: list[tuple[int, int]],
-        key_positions: dict[str, tuple[int, int]]
-) -> tuple[list[tuple[int, int]], dict[tuple[int, int], int], int]:
+        start_positions: list[Position],
+        key_positions: dict[str, Position]
+) -> tuple[list[Position], dict[Position, int]]:
     """
-    Строит полный список точек интереса: сначала стартовые позиции, затем позиции ключей в лексикографическом порядке.
-    Возвращает список точек, словарь координат->индекс и число ключей.
+    Строит список точек интереса: сначала старты, затем ключи в лексикографическом порядке.
+    Возвращает all_points и маппинг coordinate_to_index.
     """
     sorted_keys = sorted(key_positions)
-    number_of_keys = len(sorted_keys)
-    all_points = start_positions + [key_positions[key] for key in sorted_keys]
-    coordinate_to_index = {point: index for index, point in
-                           enumerate(all_points)}
-    return all_points, coordinate_to_index, number_of_keys
+    all_points: list[Position] = [*start_positions] + [key_positions[k] for k in
+                                                       sorted_keys]
+    coordinate_to_index = {pt: idx for idx, pt in enumerate(all_points)}
+    return all_points, coordinate_to_index
 
 
 def build_reachability_graph(
         grid: list[list[str]],
-        points: list[tuple[int, int]],
-        coordinate_to_index: dict[tuple[int, int], int]
+        points: list[Position],
+        coordinate_to_index: dict[Position, int]
 ) -> list[dict[int, list[tuple[int, int]]]]:
     """
     Для каждой точки рассчитывает все достижимые другие точки вместе с маской дверей и расстоянием.
@@ -153,7 +155,9 @@ def compute_minimum_edge_length(
 
 
 def a_star_search(
-        graph: list[dict[int, list[tuple[int, int]]]], num_keys: int) -> int:
+        graph: list[dict[int, list[tuple[int, int]]]],
+        num_keys: int
+) -> int:
     """
     Выполняет A*-поиск по состояниям роботов и собранных ключей.
     Возвращает минимальное число шагов или -1, если сбор всех ключей невозможен.
@@ -221,12 +225,12 @@ def solve(grid: list[list[str]]) -> int:
     """
     Координирует разбор сетки, построение графа и запуск A*-поиска.
     """
-    start_positions, key_positions = parse_grid(grid)
-    points, coordinate_to_index, number_of_keys = index_points(start_positions,
-                                                               key_positions)
+    parsed = parse_grid(grid)
+    start_positions, key_positions = parsed.start_positions, parsed.key_positions
+    points, coordinate_to_index = index_points(start_positions, key_positions)
     graph = build_reachability_graph(grid, points, coordinate_to_index)
     apply_pareto_filter(graph)
-    return a_star_search(graph, number_of_keys)
+    return a_star_search(graph, len(key_positions))
 
 
 def main():
