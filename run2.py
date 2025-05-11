@@ -1,11 +1,10 @@
 import sys
-from typing import List, Tuple, Dict
 from collections import deque, defaultdict
 import heapq
 from dataclasses import dataclass, field
 
 
-def get_input() -> List[List[str]]:
+def get_input() -> list[list[str]]:
     """
     Читает входной лабиринт из стандартного ввода и возвращает список списков символов.
     """
@@ -22,8 +21,8 @@ class PriorityQueueEntry:
     state: tuple = field(compare=False)
 
 
-def parse_grid(grid: List[List[str]]
-               ) -> Tuple[List[Tuple[int, int]], Dict[str, Tuple[int, int]]]:
+def parse_grid(grid: list[list[str]]
+               ) -> tuple[list[tuple[int, int]], dict[str, tuple[int, int]]]:
     """
     Находит стартовые позиции роботов и позиции ключей в сетке.
     Возвращает количество строк, количество столбцов, список стартовых позиций и словарь ключ->позиция.
@@ -43,9 +42,9 @@ def parse_grid(grid: List[List[str]]
 
 
 def index_points(
-        start_positions: List[Tuple[int, int]],
-        key_positions: Dict[str, Tuple[int, int]]
-) -> Tuple[List[Tuple[int, int]], Dict[Tuple[int, int], int], int]:
+        start_positions: list[tuple[int, int]],
+        key_positions: dict[str, tuple[int, int]]
+) -> tuple[list[tuple[int, int]], dict[tuple[int, int], int], int]:
     """
     Строит полный список точек интереса: сначала стартовые позиции, затем позиции ключей в лексикографическом порядке.
     Возвращает список точек, словарь координат->индекс и число ключей.
@@ -59,10 +58,10 @@ def index_points(
 
 
 def build_reachability_graph(
-        grid: List[List[str]],
-        points: List[Tuple[int, int]],
-        coordinate_to_index: Dict[Tuple[int, int], int]
-) -> List[Dict[int, List[Tuple[int, int]]]]:
+        grid: list[list[str]],
+        points: list[tuple[int, int]],
+        coordinate_to_index: dict[tuple[int, int], int]
+) -> list[dict[int, list[tuple[int, int]]]]:
     """
     Для каждой точки рассчитывает все достижимые другие точки вместе с маской дверей и расстоянием.
     Возвращает список словарей: graph[source_index][target_index] = [(door_mask, distance), ...].
@@ -117,7 +116,7 @@ def build_reachability_graph(
 
 
 def apply_pareto_filter(
-        graph: List[Dict[int, List[Tuple[int, int]]]]) -> None:
+        graph: list[dict[int, list[tuple[int, int]]]]) -> None:
     """
     Оставляет в каждой ячейке graph[source][target] только недоминируемые варианты (по двери и расстоянию).
     """
@@ -144,7 +143,7 @@ def apply_pareto_filter(
 
 
 def compute_minimum_edge_length(
-        graph: List[Dict[int, List[Tuple[int, int]]]]) -> int:
+        graph: list[dict[int, list[tuple[int, int]]]]) -> int:
     """
     Находит минимальное расстояние среди всех ребер графа, нужен для эвристики A*.
     """
@@ -154,7 +153,7 @@ def compute_minimum_edge_length(
 
 
 def a_star_search(
-        graph: List[Dict[int, List[Tuple[int, int]]]], num_keys: int) -> int:
+        graph: list[dict[int, list[tuple[int, int]]]], num_keys: int) -> int:
     """
     Выполняет A*-поиск по состояниям роботов и собранных ключей.
     Возвращает минимальное число шагов или -1, если сбор всех ключей невозможен.
@@ -218,7 +217,7 @@ def a_star_search(
     return -1
 
 
-def solve(grid: List[List[str]]) -> int:
+def solve(grid: list[list[str]]) -> int:
     """
     Координирует разбор сетки, построение графа и запуск A*-поиска.
     """
@@ -228,12 +227,6 @@ def solve(grid: List[List[str]]) -> int:
     graph = build_reachability_graph(grid, points, coordinate_to_index)
     apply_pareto_filter(graph)
     return a_star_search(graph, number_of_keys)
-
-
-def min_steps_to_collect_all_keys():
-    data = get_input()
-    result = solve(data)
-    print(result)
 
 
 def main():

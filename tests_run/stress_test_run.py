@@ -1,16 +1,15 @@
 import random
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
 from run import check_capacity, parse_date
 
 
 def naive_check_capacity(max_capacity: int,
-                         guests: List[Dict[str, str]]) -> bool:
+                         guests: list[dict[str, str]]) -> bool:
     """
     Проверяет корректность работы check_capacity простым алгоритмом полного перебора:
     Для каждого момента заезда считает число гостей и сравнивает с max_capacity.
     """
-    intervals: List[Any] = []
+    intervals: list[any] = []
     for guest in guests:
         check_in = parse_date(guest["check-in"])
         check_out = parse_date(guest["check-out"])
@@ -25,12 +24,12 @@ def naive_check_capacity(max_capacity: int,
     return True
 
 
-def generate_guests(n: int, days: int = 365) -> List[Dict[str, str]]:
+def generate_guests(n: int, days: int = 365) -> list[dict[str, str]]:
     """
     Генерирует список n случайных гостей с датами заезда и выезда.
     """
     base = datetime(2021, 1, 1).date()
-    guests: List[Dict[str, str]] = []
+    guests: list[dict[str, str]] = []
     for i in range(n):
         ci_offset = random.randint(0, days - 1)
         length = random.randint(1, days - ci_offset)

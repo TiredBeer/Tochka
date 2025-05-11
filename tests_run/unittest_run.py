@@ -1,5 +1,4 @@
 import unittest
-from typing import List, Dict
 from run import check_capacity
 
 
@@ -8,7 +7,7 @@ class TestCheckCapacity(unittest.TestCase):
         """
         Проверяет корректность работы функции check_capacity для разных сценариев:
         """
-        cases: List[tuple[str, int, List[Dict[str, str]], bool]] = [
+        cases: list[tuple[str, int, list[dict[str, str]], bool]] = [
             ("no_guests", 10, [], True),
             ("single_guest_fits", 1, [
                 {"name": "A", "check-in": "2021-01-01",

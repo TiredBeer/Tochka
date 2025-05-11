@@ -1,18 +1,17 @@
 import itertools
 import collections
 import random
-from typing import List, Tuple
 from run2 import solve
 
 
-def naive_solve(grid: List[List[str]]) -> int:
+def naive_solve(grid: list[list[str]]) -> int:
     """
     Наивная реализация решения задачи о роботах в лабиринте для небольшого числа ключей (<=3).
     Перебирает все возможные порядки сбора ключей и назначения роботов.
     """
     n, m = len(grid), len(grid[0])
-    starts: List[Tuple[int, int]] = []
-    key_positions: dict[str, Tuple[int, int]] = {}
+    starts: list[tuple[int, int]] = []
+    key_positions: dict[str, tuple[int, int]] = {}
 
     for i in range(n):
         for j in range(m):
@@ -24,8 +23,8 @@ def naive_solve(grid: List[List[str]]) -> int:
     keys = sorted(key_positions)
     K = len(keys)
 
-    def bfs(start: Tuple[int, int],
-            target: Tuple[int, int],
+    def bfs(start: tuple[int, int],
+            target: tuple[int, int],
             collected: set[str]
             ) -> int | None:
         """
@@ -81,7 +80,7 @@ def generate_random_grid(n: int,
                          m: int,
                          max_keys: int = 3,
                          wall_prob: float = 0.2
-                         ) -> List[str]:
+                         ) -> list[str]:
     """
     Генерирует случайный лабиринт в виде списка строк:
       - '.' — пустые клетки,
@@ -89,7 +88,7 @@ def generate_random_grid(n: int,
       - '@' — четыре стартовые позиции,
       - 'a'.. — ключи, 'A'.. — двери.
     """
-    grid: List[List[str]] = [['.' for _ in range(m)] for _ in range(n)]
+    grid: list[list[str]] = [['.' for _ in range(m)] for _ in range(n)]
     for i in range(1, n - 1):
         for j in range(1, m - 1):
             if random.random() < wall_prob:

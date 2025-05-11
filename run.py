@@ -19,7 +19,7 @@ def check_capacity(max_capacity: int, guests: list) -> bool:
         check_out = parse_date(guest["check-out"])
         events.append((check_in, 1))
         events.append((check_out, -1))
-    events.sort(key=lambda x: (x[0], x[1]))
+    events.sort()
 
     current = 0
     for date, delta in events:

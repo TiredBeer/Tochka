@@ -1,7 +1,6 @@
 import unittest
 import time
 import random
-from typing import List
 from run2 import solve
 
 
@@ -12,7 +11,7 @@ class TestLargeMaze(unittest.TestCase):
         Ожидается целочисленный результат и время работы менее 60 секунд.
         """
         n: int = 100
-        grid: List[List[str]] = [['.'] * n for _ in range(n)]
+        grid: list[list[str]] = [['.'] * n for _ in range(n)]
         grid[0][0] = '@'
         grid[0][n - 1] = '@'
         grid[n - 1][0] = '@'
@@ -40,7 +39,7 @@ class TestLargeMaze(unittest.TestCase):
         """
         random.seed(0)
         n: int = 100
-        grid: List[List[str]] = [['#'] * n for _ in range(n)]
+        grid: list[list[str]] = [['#'] * n for _ in range(n)]
         for i in range(1, n - 1):
             for j in range(1, n - 1):
                 grid[i][j] = '#' if random.random() < 0.2 else '.'
